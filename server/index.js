@@ -6,11 +6,7 @@ require('dotenv').config(); // Make sure you have a .env file
 const app = express();
 const PORT = 5001;
 
-app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['POST'],
-  allowedHeaders: ['Content-Type'],
-}));
+app.use(cors());
 app.use(express.json());
 
 // 🧠 Google Gemini API key from environment

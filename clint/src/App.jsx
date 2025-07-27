@@ -18,7 +18,7 @@ function App() {
   const generateTitles = async () => {
     setLoadingTitles(true);
     try {
-      const res = await fetch("http://localhost:5001/api/generate-title", {
+      const res = await fetch("https://video-optimizer-5.onrender.com/api/generate-title", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, topic }),
@@ -35,7 +35,7 @@ function App() {
   const generateKeywords = async () => {
     setLoadingKeywords(true);
     try {
-      const res = await fetch("http://localhost:5001/api/generate-keywords", {
+      const res = await fetch("https://video-optimizer-5.onrender.com/api/generate-keywords", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
@@ -58,7 +58,7 @@ function App() {
   const generateDescription = async () => {
     setLoadingDescription(true);
     try {
-      const res = await fetch("http://localhost:5001/api/generate-description", {
+      const res = await fetch("https://video-optimizer-5.onrender.com/api/generate-description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
