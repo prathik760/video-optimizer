@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import './App.css'
+import "./App.css";
+
 function App() {
   const [title, setTitle] = useState("");
   const [topic, setTopic] = useState("");
@@ -12,64 +13,74 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    document.body.className = darkMode ? "dark-mode" : "";
+    if (darkMode) {
+      document.body.classList.add("dark-mode");
+    } else {
+      document.body.classList.remove("dark-mode");
+    }
   }, [darkMode]);
+
+  const handleFetch = async (url, body, errorMessage) => {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+
+      return await res.json();
+    } catch (error) {
+      console.error(errorMessage, error);
+      alert(errorMessage);
+      return null;
+    }
+  };
 
   const generateTitles = async () => {
     setLoadingTitles(true);
-    try {
-      const res = await fetch("https://video-optimizer-5.onrender.com/api/generate-title", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, topic }),
-      });
-      const data = await res.json();
+    const data = await handleFetch(
+      "http://localhost:5001/api/generate-title",
+      { title, topic },
+      "Failed to generate titles. The server might be down or experiencing issues."
+    );
+    if (data) {
       setResults(data.suggestions || []);
-    } catch {
-      alert("Failed to generate titles.");
-    } finally {
-      setLoadingTitles(false);
     }
+    setLoadingTitles(false);
   };
 
   const generateKeywords = async () => {
     setLoadingKeywords(true);
-    try {
-      const res = await fetch("https://video-optimizer-5.onrender.com/api/generate-keywords", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-      const data = await res.json();
-
+    const data = await handleFetch(
+      "http://localhost:5001/api/generate-keywords",
+      { title },
+      "Failed to generate keywords. The server might be down or experiencing issues."
+    );
+    if (data) {
       const filtered = (data.keywords || [])
         .map((kw) => kw.trim().toLowerCase().replace(/\s+/g, ""))
         .filter((kw) => kw && kw !== "sure");
-
       const tagged = filtered.map((kw) => `#${kw}`);
       setKeywords(tagged);
-    } catch {
-      alert("Failed to generate keywords.");
-    } finally {
-      setLoadingKeywords(false);
     }
+    setLoadingKeywords(false);
   };
 
   const generateDescription = async () => {
     setLoadingDescription(true);
-    try {
-      const res = await fetch("https://video-optimizer-5.onrender.com/api/generate-description", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-      const data = await res.json();
+    const data = await handleFetch(
+      "http://localhost:5001/api/generate-description",
+      { title },
+      "Failed to generate description. The server might be down or experiencing issues."
+    );
+    if (data) {
       setDescription(data.description || "");
-    } catch {
-      alert("Failed to generate description.");
-    } finally {
-      setLoadingDescription(false);
     }
+    setLoadingDescription(false);
   };
 
   const copyToClipboard = (text) => {
@@ -78,27 +89,19 @@ function App() {
     });
   };
 
-  const toggleStyle = {
-    position: "absolute",
-    top: 20,
-    right: 30,
-  };
-
   return (
-    <div className={`container ${darkMode ? "dark-mode" : ""}`}>
+    <div className="container">
       <div className="toggle-container">
-  <label className="switch">
-    <input
-      type="checkbox"
-      onChange={(e) =>
-        document.body.classList.toggle("dark-mode", e.target.checked)
-      }
-    />
-    <span className="slider"></span>
-  </label>
-  <span>{document.body.classList.contains("dark-mode") ? "Dark Mode" : "Light Mode"}</span>
-</div>
-
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={darkMode}
+            onChange={(e) => setDarkMode(e.target.checked)}
+          />
+          <span className="slider"></span>
+        </label>
+        <span>{darkMode ? "Dark Mode" : "Light Mode"}</span>
+      </div>
 
       <h2 className="heading">🎯 AI Video Title Optimizer</h2>
 
@@ -120,7 +123,7 @@ function App() {
       <button
         className="button"
         onClick={generateTitles}
-        disabled={loadingTitles}
+        disabled={loadingTitles || !title || !topic}
       >
         {loadingTitles ? "Generating Titles..." : "Generate Titles"}
       </button>

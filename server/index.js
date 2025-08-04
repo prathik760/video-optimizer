@@ -1,7 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-require('dotenv').config(); // Make sure you have a .env file
+import express from "express";
+import cors from "cors";
+import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 const PORT = 5001;
@@ -9,13 +11,9 @@ const PORT = 5001;
 app.use(cors());
 app.use(express.json());
 
-// 🧠 Google Gemini API key from environment
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
-
-
-// ✨ Gemini Helper Function
 async function callGemini(prompt) {
   const body = {
     contents: [
@@ -25,81 +23,133 @@ async function callGemini(prompt) {
     ],
   };
 
-  const response = await axios.post(GEMINI_URL, body);
-  return response.data.candidates[0].content.parts[0].text;
+  const headers = {
+    "Content-Type": "application/json",
+    "X-goog-api-key": GEMINI_API_KEY,
+  };
+
+  try {
+    const response = await axios.post(GEMINI_URL, body, { headers });
+    const text = response.data.candidates[0]?.content?.parts[0]?.text;
+    if (!text) {
+      throw new Error("No text returned from Gemini API");
+    }
+    return text;
+  } catch (error) {
+    console.error("Gemini API error:", error.response?.data || error.message);
+    throw error;
+  }
 }
 
-// 🎯 Generate Titles
-app.post('/api/generate-title', async (req, res) => {
+// Generate Titles
+app.post("/api/generate-title", async (req, res) => {
   const { title, topic } = req.body;
+
   const prompt = `
-Generate 3 viral and SEO-optimized YouTube video titles.
+You are a creative AI that generates YouTube video titles.
+
+Generate exactly 3 viral, SEO-optimized YouTube video titles based on the following:
 
 Video Title: "${title}"
 Topic: "${topic}"
 
-Return only the 3 titles as a numbered list (1., 2., 3.) — no extra text.
+Format your response ONLY as a numbered list with each title on its own line, like:
+1. Title One
+2. Title Two
+3. Title Three
+No additional explanation.
 `;
 
   try {
     const raw = await callGemini(prompt);
+    // console.log("Raw Titles Response:", raw);
+
     const suggestions = raw
-      .split('\n')
+      .split("\n")
       .map(line => line.trim())
-      .filter(line => line.match(/^[0-9]+\./));
+      .filter(line => /^[0-9]+\.\s/.test(line))
+      .map(line => line.replace(/^[0-9]+\.\s*/, ""));
+
+    if (suggestions.length === 0) {
+      throw new Error("No valid titles parsed");
+    }
 
     res.json({ suggestions });
   } catch (error) {
-    console.error("❌ Gemini error:", error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to generate titles with Gemini.' });
+    console.error("Error generating titles:", error.message);
+    res.status(500).json({ error: "Failed to generate titles with Gemini." });
   }
 });
 
-// 🏷️ Generate Keywords
-app.post('/api/generate-keywords', async (req, res) => {
+// Generate Keywords
+app.post("/api/generate-keywords", async (req, res) => {
   const { title } = req.body;
-  const prompt = `
-Suggest 10 SEO-friendly hashtags for this YouTube title: "${title}"
 
-Only return hashtags like #ai #marketing etc., separated by new lines.
-Avoid using #sure or generic terms.
+  const prompt = `
+You are a helpful AI that generates SEO-friendly hashtags for YouTube videos.
+
+Suggest 10 relevant hashtags (without the # symbol) for this YouTube video title:
+
+"${title}"
+
+Return them as a newline-separated list of single words or short phrases (no extra text).
+Exclude generic or unrelated terms like "sure".
 `;
 
   try {
     const raw = await callGemini(prompt);
+    // console.log("Raw Keywords Response:", raw);
+
     const keywords = raw
-      .split('\n')
-      .map((kw) => kw.trim().toLowerCase().replace(/^#/, ''))
-      .filter((kw) => kw && kw !== 'sure');
+      .split("\n")
+      .map(kw => kw.trim().toLowerCase().replace(/^#/, ""))
+      .filter(kw => kw && kw !== "sure");
+
+    if (keywords.length === 0) {
+      throw new Error("No valid keywords parsed");
+    }
 
     res.json({ keywords });
   } catch (error) {
-    console.error("❌ Gemini keyword error:", error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to generate keywords with Gemini.' });
+    console.error("Error generating keywords:", error.message);
+    res.status(500).json({ error: "Failed to generate keywords with Gemini." });
   }
 });
 
-// 📝 Generate Description
-app.post('/api/generate-description', async (req, res) => {
+// Generate Description
+app.post("/api/generate-description", async (req, res) => {
   const { title } = req.body;
-  const prompt = `
-Write a short, engaging, and SEO-friendly YouTube description for the video titled "${title}".
 
-Use keywords naturally, make it about 2-3 lines, and keep it audience-friendly.
+  const prompt = `
+You are an AI that writes engaging, SEO-friendly YouTube video descriptions.
+
+Write a concise description (2-3 lines) for the video titled:
+
+"${title}"
+
+Make it audience-friendly and naturally include relevant keywords.
+Return only the description text, no extra commentary.
 `;
 
   try {
-    const description = await callGemini(prompt);
-    res.json({ description: description.trim() });
+    const raw = await callGemini(prompt);
+    // console.log("Raw Description Response:", raw);
+
+    const description = raw.trim();
+    if (!description) {
+      throw new Error("Empty description generated");
+    }
+
+    res.json({ description });
   } catch (error) {
-    console.error("❌ Gemini description error:", error?.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to generate description with Gemini.' });
+    console.error("Error generating description:", error.message);
+    res.status(500).json({ error: "Failed to generate description with Gemini." });
   }
 });
 
-// 🟢 Health Check
-app.get('/', (req, res) => {
-  res.send('✅ Gemini AI backend is running!');
+// Health check
+app.get("/", (req, res) => {
+  res.send("✅ Gemini AI backend is running!");
 });
 
 app.listen(PORT, () => {
