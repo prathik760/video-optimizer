@@ -12,6 +12,8 @@ function App() {
   const [loadingDescription, setLoadingDescription] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
+  const API_BASE = "https://video-optimizer-backend.onrender.com";
+
   useEffect(() => {
     if (darkMode) {
       document.body.classList.add("dark-mode");
@@ -43,7 +45,7 @@ function App() {
   const generateTitles = async () => {
     setLoadingTitles(true);
     const data = await handleFetch(
-      "http://localhost:5001/api/generate-title",
+      `${API_BASE}/api/generate-title`,
       { title, topic },
       "Failed to generate titles. The server might be down or experiencing issues."
     );
@@ -56,7 +58,7 @@ function App() {
   const generateKeywords = async () => {
     setLoadingKeywords(true);
     const data = await handleFetch(
-      "http://localhost:5001/api/generate-keywords",
+      `${API_BASE}/api/generate-keywords`,
       { title },
       "Failed to generate keywords. The server might be down or experiencing issues."
     );
@@ -73,7 +75,7 @@ function App() {
   const generateDescription = async () => {
     setLoadingDescription(true);
     const data = await handleFetch(
-      "http://localhost:5001/api/generate-description",
+      `${API_BASE}/api/generate-description`,
       { title },
       "Failed to generate description. The server might be down or experiencing issues."
     );
@@ -148,13 +150,13 @@ function App() {
         {loadingKeywords ? "Generating Hashtags..." : "Generate Hashtags"}
       </button>
 
-      <ul>
+      
         {keywords.map((kw, i) => (
           <li key={i} className="list-item">
-            {i + 1}. {kw}
+            {kw}
           </li>
         ))}
-      </ul>
+      
 
       {keywords.length > 0 && (
         <button
